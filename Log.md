@@ -26,10 +26,10 @@
 - [x] **[Input]** 实现 WASD 移动与鼠标视角控制 (对接 Camera)
 - [x] **[Feature]** 实现“义眼变焦”功能 (动态调整 FOV)
 
-### 👤 成员 B - 场景与渲染 (Renderer)
+### 👤 覃司翰 & 袁舜骐 - 场景与渲染 (Renderer)
 * **职责:** 模型加载、光照系统、天空盒
-- [ ] **[Model]** 封装 `Mesh` 和 `Model` 类 (基于 Assimp)
-- [ ] **[Scene]** 寻找并加载赛博朋克城市模型 (.obj/.gltf)
+- [x] **[Model]** 封装 `Mesh` 和 `Model` 类 (基于 Assimp)
+- [x] **[Scene]** 寻找并加载赛博朋克城市模型 (.obj/.gltf)
 - [ ] **[Lighting]** 实现多光源 Blinn-Phong Shader (支持霓虹灯光效)
 - [ ] **[Skybox]** 实现立方体贴图天空盒 (夜景)
 
@@ -46,3 +46,7 @@
 - [ ] **[Logic]** 实现“视觉锁定”算法 (计算 ViewDir 与 Target 夹角)
 - [ ] **[GameLoop]** 实现游戏状态机 (Start -> Play -> Win/Lose)
 - [ ] **[Integrate]** 整合所有人的模块，微调参数
+
+To Do：
+1. 修正姿态： 调整坐标轴，让城市立起来，而不是躺着转。
+2. 光照实现： 完成多光源 Blinn-Phong Shader，营造赛博朋克霓虹灯效果。（解决没有贴图问题）

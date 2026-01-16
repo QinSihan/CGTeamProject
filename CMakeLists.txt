@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 确保 assets 和 shaders 文件夹被复制到生成目录，方便 exe 读取
 file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR}/shaders)
 # 下面这行有模型文件了再取消注释
-# file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}/assets)
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}/assets)
 
 # --- 2. 包含路径 ---
 # 包含根目录
@@ -64,8 +64,20 @@ FetchContent_MakeAvailable(assimp)
 # 注意：一定要包含 src/glad.c 和 src/main.cpp
 add_executable(${PROJECT_NAME} 
     "src/main.cpp"
-    "src/glad.c"    
+    "src/glad.c"
+    "src/stb_image_impl.cpp"
     ${IMGUI_SOURCES}
+)
+
+# 每次编译后，自动把 assets 和 shaders 文件夹复制到 exe 旁边
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/assets"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/assets"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/shaders"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders"
+    COMMENT "正在自动搬运资源文件 (Assets & Shaders)..."
 )
 
 # --- 5. 链接库 ---

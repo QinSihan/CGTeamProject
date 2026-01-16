@@ -6,6 +6,10 @@
 #include <iostream>
 
 #include "Camera.h"
+#include "Shader.h"
+#include "Model.h"
+
+#include <filesystem> // 调试
 
 // --- 函数声明 ---
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -28,6 +32,7 @@ float lastFrame = 0.0f;
 
 int main()
 {
+    std::cout << "Current path is: " << std::filesystem::current_path() << std::endl; // 调试
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -61,6 +66,23 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
+    // --- 加载模型与着色器 ---
+
+    // 1. 启用深度测试 (避免模型透视)
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE); // 临时
+
+    // 2. 编译着色器 (注意路径！)
+    // 相对路径 "shaders/model.vs"
+    Shader ourShader("shaders/model.vs", "shaders/model.fs");
+
+    // 3. 加载模型 (会打印 Assimp 日志)
+    // 注意：路径必须指向 assets 里的 .gltf 文件
+    Model ourModel("assets/scene.gltf");
+
+    // 设置光照方向 (从上往下照)
+    glm::vec3 lightDirection(-0.2f, -1.0f, -0.3f);
+
     while (!glfwWindowShouldClose(window)) {
         // 计算每一帧的时间差
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -74,16 +96,43 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // 1. 清屏
         glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // [测试] 打印一下摄像机位置，确认它在动
-        // std::cout << "Pos: " << camera.Position.x << ", " << camera.Position.y << ", " << camera.Position.z << std::endl;
+        // 2. 激活 Shader
+        ourShader.use();
 
-        // 渲染 ImGui
+        // 3. 设置摄像机 (View & Projection)
+        // 这里把 Far Plane (远平面) 设置到 1000.0f，防止远处被切掉
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1000.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        ourShader.setMat4("projection", projection);
+        ourShader.setMat4("view", view);
+
+        // 4. 设置模型 (Model)
+        glm::mat4 model = glm::mat4(1.0f);
+
+        // 往下移 -5 (让人站在地面)，往远推 -10 (确保在视野内)
+        model = glm::translate(model, glm::vec3(0.0f, -5.0f, -10.0f));
+
+        // 自动旋转，方便确认它是立体的
+        model = glm::rotate(model, (float)glfwGetTime() * 0.2f, glm::vec3(0.0f, 1.0f, 0.0f));
+
+        // 既然你试出来 0.01 是合适的，那就用 0.01
+        model = glm::scale(model, glm::vec3(0.01f));
+
+        ourShader.setMat4("model", model);
+
+        // 5. 绘制
+        ourModel.Draw(ourShader);
+        // --- 3D 场景渲染结束 ---
+
+        // 2. 渲染 ImGui (必须放在 3D 渲染之后，保证 UI 覆盖在画面最上层)
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+        // 3. 交换缓冲
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
