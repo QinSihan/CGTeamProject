@@ -60,10 +60,14 @@ public:
     // ¥¶¿Ìº¸≈Ã ‰»Î (WASD)
     void ProcessKeyboard(Camera_Movement direction, float deltaTime) {
         float velocity = MovementSpeed * deltaTime;
+        
+        // [Modified] FPS Style Movement: Ignore Y component for Forward/Backward
+        glm::vec3 plainFront = glm::normalize(glm::vec3(Front.x, 0.0f, Front.z));
+        
         if (direction == FORWARD)
-            Position += Front * velocity;
+            Position += plainFront * velocity;
         if (direction == BACKWARD)
-            Position -= Front * velocity;
+            Position -= plainFront * velocity;
         if (direction == LEFT)
             Position -= Right * velocity;
         if (direction == RIGHT)

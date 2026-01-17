@@ -33,12 +33,12 @@
 - [ ] **[Lighting]** 实现多光源 Blinn-Phong Shader (支持霓虹灯光效)
 - [ ] **[Skybox]** 实现立方体贴图天空盒 (夜景)
 
-### 👤 成员 C - 视觉特效 (VFX)
+### 👤 孙鹏翔 - 视觉特效 (VFX)
 * **职责:** 帧缓冲、后处理 (Bloom, Glitch)
-- [ ] **[FBO]** 封装 `Framebuffer` 类 (支持多重采样/离屏渲染)
-- [ ] **[Bloom]** 实现辉光特效 Shader (提取高亮 -> 高斯模糊 -> 叠加)
-- [ ] **[Glitch]** 实现故障艺术 Shader (UV 抖动, 色彩偏移)
-- [ ] **[Manage]** 编写 PostProcessor 管理类，统管特效开关
+- [x] **[FBO]** 封装 `Framebuffer` 类 (支持多重采样/离屏渲染)
+- [x] **[Bloom]** 实现辉光特效 Shader (提取高亮 -> 高斯模糊 -> 叠加)
+- [x] **[Glitch]** 实现故障艺术 Shader (UV 抖动, 色彩偏移)
+- [x] **[Manage]** 编写 PostProcessor 管理类，统管特效开关
 
 ### 👤 成员 D - 交互与逻辑 (Gameplay)
 * **职责:** 游戏循环、UI 界面、判定逻辑
@@ -48,5 +48,6 @@
 - [ ] **[Integrate]** 整合所有人的模块，微调参数
 
 To Do：
-1. 修正姿态： 调整坐标轴，让城市立起来，而不是躺着转。
-2. 光照实现： 完成多光源 Blinn-Phong Shader，营造赛博朋克霓虹灯效果。（解决没有贴图问题）
+霓虹灯光效
+夜景天空盒
+游戏逻辑
