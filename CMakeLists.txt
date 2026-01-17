@@ -66,6 +66,8 @@ add_executable(${PROJECT_NAME}
     "src/main.cpp"
     "src/glad.c"
     "src/stb_image_impl.cpp"
+    "src/Framebuffer.cpp"
+    "src/PostProcessor.cpp"
     ${IMGUI_SOURCES}
 )
 

@@ -8,8 +8,9 @@
 #include "Camera.h"
 #include "Shader.h"
 #include "Model.h"
+#include "PostProcessor.h"
 
-#include <filesystem> // 调试
+#include <filesystem> // 
 
 // --- 函数声明 ---
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -22,6 +23,7 @@ const unsigned int SCR_HEIGHT = 720;
 
 // 摄像机
 Camera camera(glm::vec3(0.0f, 2.0f, 10.0f)); // 初始位置放高一点，往后一点
+PostProcessor* postProcessor; // VFX Manager
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -29,6 +31,7 @@ bool firstMouse = true;
 // 计时器 (解决不同电脑速度不一样的问题)
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+bool isCursorVisible = false; // [NEW] Cursor state toggle
 
 int main()
 {
@@ -54,11 +57,16 @@ int main()
     //  隐藏光标并捕捉
     //  注意：按 ESC 退出前可能看不到鼠标，这是正常的
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    if (glfwRawMouseMotionSupported())
+        glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE); // Optional improved aiming
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
+    // Initialize PostProcessor
+    postProcessor = new PostProcessor(SCR_WIDTH, SCR_HEIGHT);
 
     // ImGui 初始化
     IMGUI_CHECKVERSION();
@@ -96,9 +104,10 @@ int main()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        // 1. 清屏
-        glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // 1.  (Render to MSAA FBO)
+        postProcessor->BeginRender();
+        // glClearColor(0.1f, 0.1f, 0.15f, 1.0f); // Moved to BeginRender
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Moved to BeginRender
 
         // 2. 激活 Shader
         ourShader.use();
@@ -128,7 +137,16 @@ int main()
         ourModel.Draw(ourShader);
         // --- 3D 场景渲染结束 ---
 
-        // 2. 渲染 ImGui (必须放在 3D 渲染之后，保证 UI 覆盖在画面最上层)
+        // 2. Post Processing (Resolve MSAA -> Draw Quad -> Screen)
+        postProcessor->EndRender(static_cast<float>(glfwGetTime()));
+
+        // VFX Controls
+        ImGui::Begin("VFX Control Panel");
+        ImGui::Checkbox("Glitch Effect", &postProcessor->UseGlitch);
+        ImGui::Checkbox("Bloom Effect", &postProcessor->UseBloom); // [NEW]
+        ImGui::End();
+
+        // 2. ? ImGui ( 3D ????? UI ??)
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -140,6 +158,9 @@ int main()
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+    
+    delete postProcessor;
+    
     glfwTerminate();
     return 0;
 }
@@ -147,6 +168,26 @@ int main()
 void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    // Toggle Cursor Visibility [Alt Key]
+    static bool altKeyPressed = false;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS) {
+        if (!altKeyPressed) {
+            isCursorVisible = !isCursorVisible;
+            if (isCursorVisible)
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            else
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            
+            // Only toggle once per press
+            altKeyPressed = true;
+        }
+    } else {
+        altKeyPressed = false;
+    }
+
+    // Disable camera movement when cursor is visible (for UI interaction)
+    if (isCursorVisible) return; 
 
     // WASD 控制
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -178,6 +219,8 @@ void processInput(GLFWwindow* window) {
 // 鼠标移动回调：控制视角
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
+    if (isCursorVisible) return; // Don't move camera if cursor is visible
+    
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
@@ -205,4 +248,6 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
+    if (postProcessor)
+        postProcessor->UpdateSize(width, height);
 }
