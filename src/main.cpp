@@ -236,6 +236,11 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
         camera.ProcessKeyboard(DOWN, deltaTime);
 
+    // [Removed] Right Mouse Button Zoom Logic
+    // User requested to use Scroll Wheel instead.
+    // The previous logic was resetting the Zoom every frame, making scroll wheel ineffective.
+    
+    /*
     // 实现“义眼变焦” 
     // 长按鼠标右键，FOV 变小 (放大看)
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
@@ -245,6 +250,7 @@ void processInput(GLFWwindow* window) {
         // 松开回弹 (简单的插值回弹逻辑，之后可以写更平滑的)
         if (camera.Zoom < 45.0f) camera.Zoom += 2.0f;
     }
+    */
 
     // [New] Simple Ground Collision
     // Keep camera above a certain height (e.g. -3.0 which is roughly eye level relative to model at -5.0)
