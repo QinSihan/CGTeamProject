@@ -68,6 +68,7 @@ add_executable(${PROJECT_NAME}
     "src/stb_image_impl.cpp"
     "src/Framebuffer.cpp"
     "src/PostProcessor.cpp"
+    "src/GameManager.cpp"
     ${IMGUI_SOURCES}
 )
 

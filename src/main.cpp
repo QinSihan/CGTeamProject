@@ -9,6 +9,7 @@
 #include "Shader.h"
 #include "Model.h"
 #include "PostProcessor.h"
+#include "GameManager.h" // [Added] Include Game Logic
 
 #include <filesystem> // 
 
@@ -32,6 +33,8 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 bool isCursorVisible = false; // [NEW] Cursor state toggle
+
+GameManager gameManager; // [Added] Game Manager Instance
 
 int main()
 {
@@ -70,6 +73,9 @@ int main()
     // [Modified] Enable Glitch by default, Disable Bloom by default
     postProcessor->UseGlitch = true;
     postProcessor->UseBloom = false;
+
+    // [Added] Initialize Game
+    gameManager.Init();
 
     // ImGui 初始化
     IMGUI_CHECKVERSION();
@@ -112,6 +118,9 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        // [Added] Update Game Logic
+        gameManager.Update(deltaTime);
+
         processInput(window);
 
         // ImGui 新帧
@@ -130,6 +139,8 @@ int main()
         // [NEW] 传递光照所需的 Uniforms
         ourShader.setVec3("viewPos", camera.Position);
         ourShader.setVec3("lightDirection", lightDirection);
+        ourShader.setFloat("time", static_cast<float>(glfwGetTime())); // [Added] Pass time
+        ourShader.setInt("objectType", 0); // [Added] Default to City Rendering
 
         // 3. 设置摄像机 (View & Projection)
         // 这里把 Far Plane (远平面) 设置到 1000.0f，防止远处被切掉
@@ -164,17 +175,49 @@ int main()
         glBindTexture(GL_TEXTURE_2D, whiteTexture);
 
         ourModel.Draw(ourShader);
+
+        // [Added] Render Targets (Red Dots)
+        // Reset Model Matrix for Targets
+        gameManager.Render(ourShader);
+
         // --- 3D 场景渲染结束 ---
 
         // 2. Post Processing (Resolve MSAA -> Draw Quad -> Screen)
         postProcessor->EndRender(static_cast<float>(glfwGetTime()));
 
-        // [Removed] UI removed as requested
-        /*
-        ImGui::Begin("VFX Control Panel");
-        ImGui::Text("Press Left ALT to toggle Mouse/Camera");
+        // [Modified] UI replaced with Game UI
+        ImGui::Begin("Cyberpunk Mission");
+        
+        if (gameManager.IsGameOver()) {
+            ImGui::SetWindowFontScale(2.0f);
+            ImGui::TextColored(ImVec4(1, 0, 0, 1), "MISSION COMPLETE");
+            ImGui::Text("Final Score: %d", gameManager.GetScore());
+            if (ImGui::Button("Restart")) {
+                gameManager.ResetGame();
+            }
+        } else {
+            // Timer formatting
+            float t = gameManager.GetTimeLeft();
+            int minutes = (int)(t / 60);
+            int seconds = (int)(t) % 60;
+            ImGui::Text("Time Remaining: %02d:%02d", minutes, seconds);
+            
+            ImGui::SameLine(200);
+            ImGui::Text("Targets Found: %d", gameManager.GetScore());
+            
+            ImGui::Text("Instructions:");
+            ImGui::Text("1. Find RED DOTS on buildings");
+            ImGui::Text("2. Navigate closer (flying/walking)");
+            ImGui::Text("3. Zoom in (Scroll Wheel) until < 20 FOV");
+            ImGui::Text("4. Click Left Mouse Button to scan");
+        }
+        
+        // Draw Crosshair
+        ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+        draw_list->AddCircle(ImVec2(SCR_WIDTH/2, SCR_HEIGHT/2), 5.0f, IM_COL32(255, 0, 0, 200));
+        draw_list->AddCircle(ImVec2(SCR_WIDTH/2, SCR_HEIGHT/2), 1.0f, IM_COL32(255, 0, 0, 255), 0, 2.0f);
+        
         ImGui::End();
-        */
 
         // 2. ImGui
         ImGui::Render();
@@ -198,6 +241,22 @@ int main()
 void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    // [Added] Handle Shooting (Mouse Left Click)
+    static bool leftMousePressed = false;
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        if (!leftMousePressed) {
+            bool validHit = false;
+            if (gameManager.CheckShot(camera, validHit)) {
+                 std::cout << "Target Neutralized!" << std::endl;
+            } else {
+                 // std::cout << "Missed or Zoom insufficient." << std::endl;
+            }
+            leftMousePressed = true;
+        }
+    } else {
+        leftMousePressed = false;
+    }
 
     // Toggle Cursor Visibility [Alt Key]
     static bool altKeyPressed = false;

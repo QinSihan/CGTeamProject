@@ -40,9 +40,9 @@
 - [x] **[Glitch]** 实现故障艺术 Shader (UV 抖动, 色彩偏移)
 - [x] **[Manage]** 编写 PostProcessor 管理类，统管特效开关
 
-### 👤 成员 D - 交互与逻辑 (Gameplay)
+### 👤 覃司翰 & 岳峻宇 - 交互与逻辑 (Gameplay)
 * **职责:** 游戏循环、UI 界面、判定逻辑
-- [ ] **[UI]** 使用 ImGui 绘制倒计时、分数板、调试面板
+- [x] **[UI]** 使用 ImGui 绘制倒计时、分数板、调试面板
 - [ ] **[Logic]** 实现“视觉锁定”算法 (计算 ViewDir 与 Target 夹角)
 - [ ] **[GameLoop]** 实现游戏状态机 (Start -> Play -> Win/Lose)
 - [ ] **[Integrate]** 整合所有人的模块，微调参数
@@ -50,4 +50,4 @@
 To Do：
 霓虹灯光效
 夜景天空盒
-游戏逻辑
+游戏逻辑（已部分完成）

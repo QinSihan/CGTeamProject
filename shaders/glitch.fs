@@ -22,7 +22,7 @@ void main() {
     
     // Continuous glitch effect (Permanent)
     // Varying strength but always active
-    glitchStrength = 0.2 + 0.1 * sin(time * 5.0); 
+    glitchStrength = 0.05 + 0.05 * sin(time * 3.0); 
     
     vec2 originalUV = uv; // Keep original for bloom etc
     

@@ -13,9 +13,20 @@ struct Material {
 uniform Material material;
 uniform vec3 lightDirection;
 uniform vec3 viewPos;
+uniform int objectType; // 0 = Default (City), 1 = Target (Red Dot)
+uniform float time; // For pulsing effect
 
 void main()
 {
+    if (objectType == 1) {
+        // Pulsing Red Target
+        float pulse = (sin(time * 5.0) + 1.0) * 0.5; // 0.0 to 1.0
+        vec3 redColor = vec3(1.0, 0.0, 0.0);
+        vec3 emission = redColor * (0.8 + 0.4 * pulse); // Always bright
+        FragColor = vec4(emission, 1.0);
+        return;
+    }
+
     // properties
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
