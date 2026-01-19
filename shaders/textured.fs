@@ -40,6 +40,15 @@ void main()
     // Since it's a "Bake", we treat it as unlit (the light is in the texture)
     vec3 result = texColor; 
 
+    // --- Fog Effect (Night Mists) ---
+    float dist = length(viewPos - FragPos);
+    float fogStart = 20.0;
+    float fogEnd = 150.0;
+    float fogFactor = clamp((dist - fogStart) / (fogEnd - fogStart), 0.0, 1.0);
+    
+    vec3 fogColor = vec3(0.02, 0.02, 0.05); // Match clear color
+    result = mix(result, fogColor, fogFactor);
+
     // Add slight Dynamic Light influence if needed (optional)
     // vec3 lightDir = normalize(-lightDirection); 
     // float diff = max(dot(norm, lightDir), 0.0);

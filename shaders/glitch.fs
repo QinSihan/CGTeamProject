@@ -61,6 +61,27 @@ void main() {
     // Tone mapping & Gamma (Match screen.fs)
     const float gamma = 2.2;
     vec3 result = vec3(1.0) - exp(-col * exposure);
+
+    // --- Rain Effect Overlay ---
+    // Simple vertical streaks
+    vec2 rainUV = TexCoords * vec2(20.0, 1.0); // Tiles X more than Y
+    float rainSpeed = 20.0;
+    // Jitter y slightly by x to randomize columns
+    float rainY = rainUV.y + time * rainSpeed + rand(vec2(floor(rainUV.x), 0.0));
+    
+    // Check if we are in a "streak"
+    // Use noise to generate drops
+    float drop = rand(vec2(floor(rainUV.x), floor(rainY)));
+    // Threshold to make drops sparse
+    if (drop > 0.95) {
+        // Fade out trail
+        float trail = fract(rainY); // 0 to 1
+        // We want a streak, so maybe trail > 0.5?
+        // Let's just add a small white value
+        float rainIntensity = (drop - 0.95) * 20.0 * (1.0 - trail); // Bright head, dark tail
+        result += vec3(0.5, 0.6, 0.7) * rainIntensity * 0.5; // Blue-ish rain
+    }
+    
     result = pow(result, vec3(1.0 / gamma));
 
     FragColor = vec4(result, 1.0);
