@@ -95,7 +95,57 @@ int main()
 
     // 3. 加载模型 (会打印 Assimp 日志)
     // 注意：路径必须指向 assets 里的 .gltf 文件
-    Model ourModel("assets/cyberpunk_city_-_1.glb");
+    Model ourModel("assets/CuberpunkCityWithKaws.glb");
+
+    // [New] Manually load and assign City_Bake_4K.png texture
+    // This ensures the model uses the provided texture even if the GLB doesn't reference it correctly.
+    {
+        string textName = "City_Bake_4K.png";
+        string textPath = "assets/" + textName;
+        int width, height, nrChannels;
+        stbi_set_flip_vertically_on_load(false); // [Check] Bake textures usually don't need flip if UVs match standard GLTF
+        unsigned char* data = stbi_load(textPath.c_str(), &width, &height, &nrChannels, 0);
+        
+        if (data) {
+            std::cout << "Loaded texture: " << textName << " (" << width << "x" << height << ")" << std::endl;
+            unsigned int cityTextureID;
+            glGenTextures(1, &cityTextureID);
+            glBindTexture(GL_TEXTURE_2D, cityTextureID);
+            
+            GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            stbi_image_free(data);
+
+            // Apply to all meshes
+            Texture t;
+            t.id = cityTextureID;
+            t.type = "texture_diffuse";
+            t.path = textName;
+
+            for (auto& mesh : ourModel.meshes) {
+                mesh.textures.clear(); // Remove existing/embedded textures
+                mesh.textures.push_back(t);
+            }
+        } else {
+            std::cout << "Failed to load texture: " << textPath << " (Reason: " << stbi_failure_reason() << ")" << std::endl;
+            // Fallback: Create a MAGENTA texture to indicate error visibly
+            unsigned int errorTexture;
+            glGenTextures(1, &errorTexture);
+            glBindTexture(GL_TEXTURE_2D, errorTexture);
+            unsigned char magenta[] = { 255, 0, 255 }; 
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, magenta);
+             
+            Texture t; t.id = errorTexture; t.type = "texture_diffuse"; t.path = "error";
+            for (auto& mesh : ourModel.meshes) { mesh.textures.clear(); mesh.textures.push_back(t); }
+        }
+    }
 
     // [New] 创建一个默认的白色纹理，防止模型没有纹理时采样到错误的显存（如上一帧的屏幕）导致闪烁
     // [Modified] Change white texture to Gray to detect if texture mapping is failing
@@ -163,7 +213,7 @@ int main()
         model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
         // 缩放
-        model = glm::scale(model, glm::vec3(0.1f));
+        model = glm::scale(model, glm::vec3(10.0f));
 
         ourShader.setMat4("model", model);
 
