@@ -194,60 +194,160 @@ int main()
     // 设置光照方向 (从上往下照)
     glm::vec3 lightDirection(-0.2f, -1.0f, -0.3f);
 
-    bool isGameStarted = false; // [New] Menu State
+    // [Modified] Game State Machine
+    // 0: Start Screen
+    // 1: Story/Background
+    // 2: Instructions
+    // 3: Game Running
+    int gameState = 0; 
+    bool enterPressed = false; // Debounce for Enter key
 
     while (!glfwWindowShouldClose(window)) {
-        // [New] Start Screen Logic
-        if (!isGameStarted) {
+        // [New] Menu & State Handling
+        if (gameState != 3) {
             // Input Poll
             glfwPollEvents();
-            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
-                isGameStarted = true;
-                gameManager.ResetGame();
-                lastFrame = static_cast<float>(glfwGetTime()); // Reset delta time
-            }
-             if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
                 glfwSetWindowShouldClose(window, true);
+
+            // State Transition Logic
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+                if (!enterPressed) {
+                    enterPressed = true;
+                    if (gameState == 0) gameState = 1;      // Start -> Story
+                    else if (gameState == 1) gameState = 2; // Story -> Instr
+                    else if (gameState == 2) {              // Instr -> Game
+                        gameState = 3;
+                        gameManager.ResetGame();
+                        lastFrame = static_cast<float>(glfwGetTime()); 
+                    }
+                }
+            } else {
+                enterPressed = false;
+            }
 
             // Render Start Screen
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
             
-            // Draw Full Screen Image with Crop (Aspect Fill)
-            if (startPageTexture != 0) {
-                 float screenAspect = (float)SCR_WIDTH / (float)SCR_HEIGHT;
-                 float imageAspect = (float)startPageWidth / (float)startPageHeight;
-                 ImVec2 uv0(0, 0);
-                 ImVec2 uv1(1, 1);
+            // User Window for Background
+            ImGui::SetNextWindowPos(ImVec2(0, 0));
+            ImGui::SetNextWindowSize(ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f); 
+            
+            if (ImGui::Begin("MenuState", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground)) {
+                
+                if (gameState == 0) {
+                    // --- STATE 0: Start Page ---
+                    // Draw Full Screen Image with Crop (Aspect Fill)
+                    if (startPageTexture != 0) {
+                         float screenAspect = (float)SCR_WIDTH / (float)SCR_HEIGHT;
+                         float imageAspect = (float)startPageWidth / (float)startPageHeight;
+                         ImVec2 uv0(0, 0); ImVec2 uv1(1, 1);
 
-                 if (screenAspect > imageAspect) {
-                     // Screen is wider. Crop top/bottom.
-                     float range = imageAspect / screenAspect;
-                     uv0.y = 0.5f - range * 0.5f;
-                     uv1.y = 0.5f + range * 0.5f;
-                 } else {
-                     // Screen is taller. Crop left/right.
-                     float range = screenAspect / imageAspect;
-                     uv0.x = 0.5f - range * 0.5f;
-                     uv1.x = 0.5f + range * 0.5f;
-                 }
+                         if (screenAspect > imageAspect) {
+                             // Screen is wider. Crop top/bottom.
+                             float range = imageAspect / screenAspect;
+                             uv0.y = 0.5f - range * 0.5f;
+                             uv1.y = 0.5f + range * 0.5f;
+                         } else {
+                             // Screen is taller. Crop left/right.
+                             float range = screenAspect / imageAspect;
+                             uv0.x = 0.5f - range * 0.5f;
+                             uv1.x = 0.5f + range * 0.5f;
+                         }
 
-                 ImGui::GetBackgroundDrawList()->AddImage(
-                    (void*)(intptr_t)startPageTexture, 
-                    ImVec2(0, 0), 
-                    ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT),
-                    uv0, uv1
-                );
-            } else {
-                 ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0,0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), IM_COL32(0,0,0,255));
+                         ImGui::GetWindowDrawList()->AddImage((void*)(intptr_t)startPageTexture, ImVec2(0, 0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), uv0, uv1);
+                    } else {
+                         ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0,0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), IM_COL32(0,0,0,255));
+                    }
+
+                    // Press Enter Text
+                    const char* startText = "PRESS ENTER";
+                    ImGui::SetWindowFontScale(3.0f);
+                    ImVec2 txtSz = ImGui::CalcTextSize(startText);
+                    ImGui::SetCursorPos(ImVec2((SCR_WIDTH - txtSz.x)/2, SCR_HEIGHT - 100));
+                    ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", startText);
+                } 
+                else if (gameState == 1) {
+                    // --- STATE 1: Story Background ---
+                    // Dark Background
+                    ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0,0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), IM_COL32(10, 15, 20, 255));
+                    
+                    // Text
+                    ImGui::SetWindowFontScale(2.5f);
+                    const char* title = "MISSION BRIEFING";
+                    ImVec2 tSz = ImGui::CalcTextSize(title);
+                    ImGui::SetCursorPos(ImVec2((SCR_WIDTH - tSz.x)/2, 80));
+                    ImGui::TextColored(ImVec4(1, 0.2f, 0.2f, 1), "%s", title);
+                    
+                    ImGui::SetWindowFontScale(1.5f);
+                    ImGui::SetCursorPos(ImVec2(100, 200));
+                    ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "ID: INSPECTOR 7734");
+                    ImGui::SetCursorPosX(100);
+                    ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1), "SECTOR: NEO-KYOTO DISTRICT 9");
+                    
+                    ImGui::Dummy(ImVec2(0, 30));
+                    ImGui::SetCursorPosX(100);
+                    ImGui::TextWrapped("You are an inspector in the Cyberpunk City.");
+                    ImGui::SetCursorPosX(100);
+                    ImGui::TextWrapped("Headquarters has ordered an investigation into this district.");
+                    ImGui::SetCursorPosX(100);
+                    ImGui::TextWrapped("Numerous 'Anomalies' (Red Signals) have been reported.");
+                    ImGui::Dummy(ImVec2(0, 20));
+                    ImGui::SetCursorPosX(100);
+                    ImGui::TextWrapped("OBJECTIVE: Find and scan as many Anomalies as possible within the TIME LIMIT.");
+                    ImGui::SetCursorPosX(100);
+                    ImGui::TextWrapped("The data you collect is vital to confirming the threat level.");
+                    
+                    // Next Prompt
+                    ImGui::SetWindowFontScale(1.2f);
+                    ImGui::SetCursorPos(ImVec2(SCR_WIDTH - 300, SCR_HEIGHT - 80));
+                    if (sin(glfwGetTime()*5) > 0)
+                        ImGui::TextColored(ImVec4(0, 1, 1, 1), "PRESS ENTER TO CONTINUE >>");
+                }
+                else if (gameState == 2) {
+                    // --- STATE 2: Instructions ---
+                    ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0,0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), IM_COL32(10, 15, 20, 255));
+                    
+                    ImGui::SetWindowFontScale(2.5f);
+                    const char* title = "OPERATIONAL GUIDE";
+                    ImVec2 tSz = ImGui::CalcTextSize(title);
+                    ImGui::SetCursorPos(ImVec2((SCR_WIDTH - tSz.x)/2, 80));
+                    ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1), "%s", title);
+                    
+                    float centerX = SCR_WIDTH / 2 - 200;
+                    ImGui::SetWindowFontScale(1.8f);
+
+                    ImGui::SetCursorPos(ImVec2(centerX, 200));
+                    ImGui::TextColored(ImVec4(1, 1, 0, 1), "[ MOVEMENT ]");
+                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("W A S D - Move");
+                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("Space / C - Fly Up / Down");
+                    
+                    ImGui::Dummy(ImVec2(0, 20));
+                    ImGui::SetCursorPosX(centerX);
+                    ImGui::TextColored(ImVec4(1, 1, 0, 1), "[ OPTICS ]");
+                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("Mouse - Look");
+                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("Scroll Wheel - ZOOM IN / OUT");
+                    
+                    ImGui::Dummy(ImVec2(0, 20));
+                    ImGui::SetCursorPosX(centerX);
+                    ImGui::TextColored(ImVec4(1, 0, 0, 1), "[ SCANNING ]");
+                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("1. Locate RED DOT on buildings");
+                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("2. ZOOM IN until FOV > 20");
+                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("3. LEFT CLICK to Scan");
+                    
+                     // Start Prompt
+                    ImGui::SetWindowFontScale(1.5f);
+                    ImGui::SetCursorPos(ImVec2((SCR_WIDTH - 400)/2, SCR_HEIGHT - 100));
+                    if (sin(glfwGetTime()*8) > 0)
+                        ImGui::TextColored(ImVec4(0, 1, 1, 1), "PRESS ENTER TO START MISSION");
+                }
             }
-
-            // [Modified] Draw Start Text with Shadow/Background
-            const char* startText = "PRESS ENTER TO START";
-            // Use nicer font scaling or standard font
-            ImGui::GetForegroundDrawList()->AddText(NULL, 40.0f, ImVec2(52, SCR_HEIGHT - 100 + 2), IM_COL32(0,0,0,255), startText);
-            ImGui::GetForegroundDrawList()->AddText(NULL, 40.0f, ImVec2(50, SCR_HEIGHT - 100), IM_COL32(0,255,255,255), startText);
+            ImGui::End();
+            ImGui::PopStyleVar(2);
 
             ImGui::Render();
             int display_w, display_h;
