@@ -159,10 +159,74 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+    // [New] Load Start Page Texture for Menu
+    unsigned int startPageTexture = 0;
+    {
+        string textPath = "assets/StartPage.jpg";
+        int width, height, nrChannels;
+        stbi_set_flip_vertically_on_load(false); 
+        unsigned char* data = stbi_load(textPath.c_str(), &width, &height, &nrChannels, 0);
+        if (data) {
+             glGenTextures(1, &startPageTexture);
+             glBindTexture(GL_TEXTURE_2D, startPageTexture);
+             GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+             glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+             glGenerateMipmap(GL_TEXTURE_2D);
+             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); 
+             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+             stbi_image_free(data);
+             std::cout << "Loaded StartPage texture." << std::endl;
+        } else {
+             std::cout << "Failed to load StartPage texture." << std::endl;
+        }
+    }
+
     // 设置光照方向 (从上往下照)
     glm::vec3 lightDirection(-0.2f, -1.0f, -0.3f);
 
+    bool isGameStarted = false; // [New] Menu State
+
     while (!glfwWindowShouldClose(window)) {
+        // [New] Start Screen Logic
+        if (!isGameStarted) {
+            // Input Poll
+            glfwPollEvents();
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+                isGameStarted = true;
+                gameManager.ResetGame();
+                lastFrame = static_cast<float>(glfwGetTime()); // Reset delta time
+            }
+             if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+                glfwSetWindowShouldClose(window, true);
+
+            // Render Start Screen
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+            
+            // Draw Full Screen Image
+            ImGui::GetBackgroundDrawList()->AddImage(
+                (void*)(intptr_t)startPageTexture, 
+                ImVec2(0, 0), 
+                ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT)
+            );
+
+            // Optional: Draw text instruction if image doesn't have it
+            // ImGui::GetForegroundDrawList()->AddText(ImGui::GetFont(), 30.0f, ImVec2(50, 50), IM_COL32(255,255,255,255), "Press ENTER to Start");
+
+            ImGui::Render();
+            int display_w, display_h;
+            glfwGetFramebufferSize(window, &display_w, &display_h);
+            glViewport(0, 0, display_w, display_h);
+            glClear(GL_COLOR_BUFFER_BIT); // Clear previous
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+            
+            glfwSwapBuffers(window);
+            continue; // Skip the rest of the loop
+        }
+
         // 计算每一帧的时间差
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
