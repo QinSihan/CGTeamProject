@@ -9,21 +9,21 @@
 #include "Shader.h"
 #include "Model.h"
 #include "PostProcessor.h"
-#include "GameManager.h" // [Added] Include Game Logic
+#include "GameManager.h" // Include Game Logic
 
 #include <filesystem> // 
 
 // --- 函数声明 ---
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos); // [NEW]
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset); // [NEW]
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);  
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset); 
 void processInput(GLFWwindow* window);
 
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 // 摄像机
-Camera camera(glm::vec3(0.0f, -3.0f, 25.0f)); // [Reverted] Position back to 25.0f
+Camera camera(glm::vec3(0.0f, -3.0f, 25.0f)); // Position back to 25.0f
 PostProcessor* postProcessor; // VFX Manager
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
@@ -32,9 +32,9 @@ bool firstMouse = true;
 // 计时器 (解决不同电脑速度不一样的问题)
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
-bool isCursorVisible = false; // [NEW] Cursor state toggle
+bool isCursorVisible = false; // Cursor state toggle
 
-GameManager gameManager; // [Added] Game Manager Instance
+GameManager gameManager; // Game Manager Instance
 
 int main()
 {
@@ -74,7 +74,7 @@ int main()
     postProcessor->UseGlitch = true;
     postProcessor->UseBloom = false;
 
-    // [Added] Initialize Game
+    // Initialize Game
     gameManager.Init();
 
     // ImGui 初始化
