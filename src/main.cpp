@@ -169,9 +169,15 @@ int main()
         if (data) {
              glGenTextures(1, &startPageTexture);
              glBindTexture(GL_TEXTURE_2D, startPageTexture);
+             // [Fix] Set alignment to 1 to handle arbitrary dimensions (prevents distortion/skewing)
+             glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+             
              GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
              glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
              glGenerateMipmap(GL_TEXTURE_2D);
+             // Restore alignment default
+             glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); 
              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
              glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -206,15 +212,50 @@ int main()
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
             
-            // Draw Full Screen Image
-            ImGui::GetBackgroundDrawList()->AddImage(
-                (void*)(intptr_t)startPageTexture, 
-                ImVec2(0, 0), 
-                ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT)
-            );
+            // [Modified] User Window for Background to prevent any default artifacts
+            ImGui::SetNextWindowPos(ImVec2(0, 0));
+            ImGui::SetNextWindowSize(ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f); // No border
+            // Create a window that covers everything, no title bar, no resize, no move
+            if (ImGui::Begin("StartScreenW", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground)) {
+                
+                // Draw Full Screen Image
+                if (startPageTexture != 0) {
+                     ImGui::GetWindowDrawList()->AddImage(
+                        (void*)(intptr_t)startPageTexture, 
+                        ImVec2(0, 0), 
+                        ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT)
+                    );
+                } else {
+                     // Fallback Black
+                     ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0,0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), IM_COL32(0,0,0,255));
+                }
+            }
+            ImGui::End();
+            ImGui::PopStyleVar(2);
 
-            // Optional: Draw text instruction if image doesn't have it
-            // ImGui::GetForegroundDrawList()->AddText(ImGui::GetFont(), 30.0f, ImVec2(50, 50), IM_COL32(255,255,255,255), "Press ENTER to Start");
+            // [Modified] Draw Start Text with Shadow/Background
+            const char* startText = "PRESS ENTER TO START";
+            ImGui::SetWindowFontScale(3.0f); // Make text big
+            
+            ImVec2 textSize = ImGui::CalcTextSize(startText);
+            float textX = (SCR_WIDTH - textSize.x) * 0.5f;
+            float textY = (SCR_HEIGHT - textSize.y) * 0.8f; // Place at bottom 20%
+
+            // Drop Shadow (Black)
+            ImGui::GetForegroundDrawList()->AddText(
+                ImVec2(textX + 2, textY + 2), 
+                IM_COL32(0, 0, 0, 255), 
+                startText
+            );
+            // Main Text (White/Cyan)
+            ImGui::GetForegroundDrawList()->AddText(
+                ImVec2(textX, textY), 
+                IM_COL32(0, 255, 255, 255), 
+                startText
+            );
+            ImGui::SetWindowFontScale(1.0f); // Reset
 
             ImGui::Render();
             int display_w, display_h;
