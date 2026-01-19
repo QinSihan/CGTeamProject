@@ -40,7 +40,7 @@ private:
     float spawnTimer;
     
     // Config
-    const float GAME_DURATION = 300.0f; // 5 minutes
+    const float GAME_DURATION = 180.0f; // [Modified] 3 minutes (180s)
     const float SPAWN_INTERVAL = 3.0f; // Spawn every 3 seconds
     const float MAX_TARGETS = 10;
     const float HIT_DISTANCE_THRESHOLD = 1.0f; // Precision required

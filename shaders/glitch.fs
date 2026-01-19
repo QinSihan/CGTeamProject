@@ -62,25 +62,61 @@ void main() {
     const float gamma = 2.2;
     vec3 result = vec3(1.0) - exp(-col * exposure);
 
-    // --- Rain Effect Overlay ---
-    // Simple vertical streaks
-    vec2 rainUV = TexCoords * vec2(20.0, 1.0); // Tiles X more than Y
-    float rainSpeed = 20.0;
-    // Jitter y slightly by x to randomize columns
-    float rainY = rainUV.y + time * rainSpeed + rand(vec2(floor(rainUV.x), 0.0));
+    // --- Improved Cyberpunk Rain (Depth & Glitch) ---
+    // Slant calculation
+    vec2 rUV = TexCoords;
+    rUV.x -= rUV.y * 0.1; // Slanted rain
     
-    // Check if we are in a "streak"
-    // Use noise to generate drops
-    float drop = rand(vec2(floor(rainUV.x), floor(rainY)));
-    // Threshold to make drops sparse
-    if (drop > 0.95) {
-        // Fade out trail
-        float trail = fract(rainY); // 0 to 1
-        // We want a streak, so maybe trail > 0.5?
-        // Let's just add a small white value
-        float rainIntensity = (drop - 0.95) * 20.0 * (1.0 - trail); // Bright head, dark tail
-        result += vec3(0.5, 0.6, 0.7) * rainIntensity * 0.5; // Blue-ish rain
+    float rainTotal = 0.0;
+    
+    // Layer 1: Background (Dense, slow, faint) - "Mist Rain"
+    {
+        vec2 st = rUV * vec2(100.0, 1.0); // Very thin
+        float t = time * 0.5; // Slow
+        float col = floor(st.x);
+        float y = st.y + t + rand(vec2(col, 1.0));
+        if(rand(vec2(col, floor(y))) > 0.95) {
+            float f = fract(y);
+            rainTotal += pow(f, 5.0) * 0.1; 
+        }
     }
+
+    // Layer 2: Midground (Normal rain)
+    {
+        vec2 st = rUV * vec2(60.0, 1.0);
+        float t = time * 1.5;
+        float col = floor(st.x);
+        float y = st.y + t + rand(vec2(col, 2.0));
+        if(rand(vec2(col, floor(y))) > 0.90) { // More drops
+            float f = fract(y);
+            // Shape drop
+            float xDist = abs(fract(st.x) - 0.5);
+            if (xDist < 0.4) {
+                 rainTotal += pow(f, 10.0) * 0.4;
+            }
+        }
+    }
+    
+    // Layer 3: Foreground (Fast, bright, few) - "Camera Hits"
+    {
+        vec2 st = rUV * vec2(30.0, 1.0);
+        float t = time * 3.0; // Fast
+        float col = floor(st.x);
+        float off = rand(vec2(col, 3.5));
+        float y = st.y + t * (1.2 + off * 0.5);
+        if(rand(vec2(col, floor(y))) > 0.97) {
+            float f = fract(y);
+            // Thick drops
+            float xDist = abs(fract(st.x) - 0.5);
+            float thickness = 1.0 - smoothstep(0.0, 0.5, xDist);
+            rainTotal += pow(f, 20.0) * thickness * 0.8; 
+        }
+    }
+    
+    // Rain Color (Cyberpunk Cyan/White)
+    vec3 rainColor = vec3(0.7, 0.9, 1.0);
+    // Add additive blend
+    result += rainColor * rainTotal;
     
     result = pow(result, vec3(1.0 / gamma));
 

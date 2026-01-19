@@ -54,16 +54,16 @@ void GameManager::Update(float deltaTime) {
 
 void GameManager::SpawnTarget() {
     // Defines a rough bounding box for the city scene
-    // Expanded range to cover more of the city
-    // Center is roughly (0, -5, -10)
+    // Focus on Front-Left area (Negative X, Negative Z)
+    // [Modified] Reduced range to keep targets within the map boundaries (-80 to -10)
     
     Target t;
-    // X: -60 to 60
-    float x = (std::rand() % 1200) / 10.0f - 60.0f;
-    // Y: -4 to 20 (Lowered max height from 35)
-    float y = (std::rand() % 240) / 10.0f - 4.0f; 
-    // Z: -70 to 30
-    float z = (std::rand() % 1000) / 10.0f - 70.0f;
+    // X: -80 to -10 (Closer to center)
+    float x = (std::rand() % 700) / 10.0f - 80.0f;
+    // Y: 10 to 50 (High rises)
+    float y = (std::rand() % 400) / 10.0f + 10.0f; 
+    // Z: -100 to -20 (Closer to center)
+    float z = (std::rand() % 800) / 10.0f - 100.0f;
     
     t.position = glm::vec3(x, y, z);
     t.isActive = true;

@@ -23,7 +23,7 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 // 摄像机
-Camera camera(glm::vec3(0.0f, -3.0f, 10.0f)); // 初始位置调整到地面高度 (对应地面碰撞逻辑的 -3.0f)
+Camera camera(glm::vec3(0.0f, -3.0f, 25.0f)); // [Reverted] Position back to 25.0f
 PostProcessor* postProcessor; // VFX Manager
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
