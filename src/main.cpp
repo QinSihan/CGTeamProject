@@ -161,11 +161,13 @@ int main()
 
     // [New] Load Start Page Texture for Menu
     unsigned int startPageTexture = 0;
+    int startPageWidth = 0;
+    int startPageHeight = 0;
     {
         string textPath = "assets/StartPage.jpg";
-        int width, height, nrChannels;
+        int nrChannels;
         stbi_set_flip_vertically_on_load(false); 
-        unsigned char* data = stbi_load(textPath.c_str(), &width, &height, &nrChannels, 0);
+        unsigned char* data = stbi_load(textPath.c_str(), &startPageWidth, &startPageHeight, &nrChannels, 0);
         if (data) {
              glGenTextures(1, &startPageTexture);
              glBindTexture(GL_TEXTURE_2D, startPageTexture);
@@ -173,7 +175,7 @@ int main()
              glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
              
              GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-             glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+             glTexImage2D(GL_TEXTURE_2D, 0, format, startPageWidth, startPageHeight, 0, format, GL_UNSIGNED_BYTE, data);
              glGenerateMipmap(GL_TEXTURE_2D);
              // Restore alignment default
              glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -212,50 +214,40 @@ int main()
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
             
-            // [Modified] User Window for Background to prevent any default artifacts
-            ImGui::SetNextWindowPos(ImVec2(0, 0));
-            ImGui::SetNextWindowSize(ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT));
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f); // No border
-            // Create a window that covers everything, no title bar, no resize, no move
-            if (ImGui::Begin("StartScreenW", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground)) {
-                
-                // Draw Full Screen Image
-                if (startPageTexture != 0) {
-                     ImGui::GetWindowDrawList()->AddImage(
-                        (void*)(intptr_t)startPageTexture, 
-                        ImVec2(0, 0), 
-                        ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT)
-                    );
-                } else {
-                     // Fallback Black
-                     ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0,0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), IM_COL32(0,0,0,255));
-                }
+            // Draw Full Screen Image with Crop (Aspect Fill)
+            if (startPageTexture != 0) {
+                 float screenAspect = (float)SCR_WIDTH / (float)SCR_HEIGHT;
+                 float imageAspect = (float)startPageWidth / (float)startPageHeight;
+                 ImVec2 uv0(0, 0);
+                 ImVec2 uv1(1, 1);
+
+                 if (screenAspect > imageAspect) {
+                     // Screen is wider. Crop top/bottom.
+                     float range = imageAspect / screenAspect;
+                     uv0.y = 0.5f - range * 0.5f;
+                     uv1.y = 0.5f + range * 0.5f;
+                 } else {
+                     // Screen is taller. Crop left/right.
+                     float range = screenAspect / imageAspect;
+                     uv0.x = 0.5f - range * 0.5f;
+                     uv1.x = 0.5f + range * 0.5f;
+                 }
+
+                 ImGui::GetBackgroundDrawList()->AddImage(
+                    (void*)(intptr_t)startPageTexture, 
+                    ImVec2(0, 0), 
+                    ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT),
+                    uv0, uv1
+                );
+            } else {
+                 ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0,0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), IM_COL32(0,0,0,255));
             }
-            ImGui::End();
-            ImGui::PopStyleVar(2);
 
             // [Modified] Draw Start Text with Shadow/Background
             const char* startText = "PRESS ENTER TO START";
-            ImGui::SetWindowFontScale(3.0f); // Make text big
-            
-            ImVec2 textSize = ImGui::CalcTextSize(startText);
-            float textX = (SCR_WIDTH - textSize.x) * 0.5f;
-            float textY = (SCR_HEIGHT - textSize.y) * 0.8f; // Place at bottom 20%
-
-            // Drop Shadow (Black)
-            ImGui::GetForegroundDrawList()->AddText(
-                ImVec2(textX + 2, textY + 2), 
-                IM_COL32(0, 0, 0, 255), 
-                startText
-            );
-            // Main Text (White/Cyan)
-            ImGui::GetForegroundDrawList()->AddText(
-                ImVec2(textX, textY), 
-                IM_COL32(0, 255, 255, 255), 
-                startText
-            );
-            ImGui::SetWindowFontScale(1.0f); // Reset
+            // Use nicer font scaling or standard font
+            ImGui::GetForegroundDrawList()->AddText(NULL, 40.0f, ImVec2(52, SCR_HEIGHT - 100 + 2), IM_COL32(0,0,0,255), startText);
+            ImGui::GetForegroundDrawList()->AddText(NULL, 40.0f, ImVec2(50, SCR_HEIGHT - 100), IM_COL32(0,255,255,255), startText);
 
             ImGui::Render();
             int display_w, display_h;
@@ -341,37 +333,82 @@ int main()
         postProcessor->EndRender(static_cast<float>(glfwGetTime()));
 
         // [Modified] UI replaced with Game UI
-        ImGui::Begin("Cyberpunk Mission");
+        // Use a full screen window for HUD to control positioning better
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT));
+        ImGui::Begin("HUD", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground);
         
         if (gameManager.IsGameOver()) {
+            // Darken background
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0,0), ImVec2((float)SCR_WIDTH, (float)SCR_HEIGHT), IM_COL32(0,0,0,200));
+            
+            // Center the text
+            const char* title = "MISSION COMPLETE";
+            ImGui::SetWindowFontScale(3.0f);
+            float titleW = ImGui::CalcTextSize(title).x;
+            ImGui::SetCursorPos(ImVec2((SCR_WIDTH - titleW)/2, SCR_HEIGHT/3));
+            ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", title); // Cyan Title
+            
             ImGui::SetWindowFontScale(2.0f);
-            ImGui::TextColored(ImVec4(1, 0, 0, 1), "MISSION COMPLETE");
-            ImGui::Text("Final Score: %d", gameManager.GetScore());
-            if (ImGui::Button("Restart")) {
+            char scoreText[64];
+            sprintf(scoreText, "FINAL SCORE: %d", gameManager.GetScore());
+            float scoreW = ImGui::CalcTextSize(scoreText).x;
+            ImGui::SetCursorPos(ImVec2((SCR_WIDTH - scoreW)/2, SCR_HEIGHT/3 + 60));
+            ImGui::TextColored(ImVec4(1, 1, 1, 1), "%s", scoreText);
+
+            // Instructions
+            const char* sub = "Press Enter to Restart";
+            ImGui::SetWindowFontScale(1.5f);
+            float subW = ImGui::CalcTextSize(sub).x;
+            ImGui::SetCursorPos(ImVec2((SCR_WIDTH - subW)/2, SCR_HEIGHT/3 + 120));
+            if (sin(glfwGetTime() * 5.0f) > 0.0f) // Blink
+                ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", sub);
+
+            if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
                 gameManager.ResetGame();
             }
         } else {
-            // Timer formatting
+            // HUD Top Bar
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(0,0), ImVec2(SCR_WIDTH, 60), IM_COL32(0,0,0,150));
+            ImGui::GetWindowDrawList()->AddLine(ImVec2(0,60), ImVec2(SCR_WIDTH, 60), IM_COL32(0, 255, 255, 255), 2.0f);
+
+            // Timer
             float t = gameManager.GetTimeLeft();
             int minutes = (int)(t / 60);
             int seconds = (int)(t) % 60;
-            ImGui::Text("Time Remaining: %02d:%02d", minutes, seconds);
+            char timeStr[32];
+            sprintf(timeStr, "%02d:%02d", minutes, seconds);
+
+            ImGui::SetWindowFontScale(2.0f);
+            ImGui::SetCursorPos(ImVec2(20, 10));
+            ImGui::TextColored(ImVec4(1, 0, 0, 1), "TIME: %s", timeStr);
+
+            // Score
+            char scoreStr[32];
+            sprintf(scoreStr, "TARGETS: %d", gameManager.GetScore());
+            float scoreW = ImGui::CalcTextSize(scoreStr).x;
+            ImGui::SetCursorPosX(SCR_WIDTH - scoreW - 20);
+            ImGui::SetCursorPosY(10);
+            ImGui::TextColored(ImVec4(0, 1, 1, 1), "%s", scoreStr);
             
-            ImGui::SameLine(200);
-            ImGui::Text("Targets Found: %d", gameManager.GetScore());
-            
-            ImGui::Text("Instructions:");
-            ImGui::Text("1. Find RED DOTS on buildings");
-            ImGui::Text("2. Navigate closer (flying/walking)");
-            ImGui::Text("3. Zoom in (Scroll Wheel) until < 20 FOV");
-            ImGui::Text("4. Click Left Mouse Button to scan");
+            // Instructions (Bottom Left)
+            ImGui::SetWindowFontScale(1.0f);
+            ImGui::SetCursorPos(ImVec2(20, SCR_HEIGHT - 120));
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "INSTRUCTIONS:");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "- Find RED DOTS");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "- Zoom Scroll < 20 FOV");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "- Left Click to Scan");
         }
         
         // Draw Crosshair
-        ImDrawList* draw_list = ImGui::GetForegroundDrawList();
-        draw_list->AddCircle(ImVec2(SCR_WIDTH/2, SCR_HEIGHT/2), 5.0f, IM_COL32(255, 0, 0, 200));
-        draw_list->AddCircle(ImVec2(SCR_WIDTH/2, SCR_HEIGHT/2), 1.0f, IM_COL32(255, 0, 0, 255), 0, 2.0f);
-        
+        if (!gameManager.IsGameOver()) {
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+            draw_list->AddCircle(ImVec2(SCR_WIDTH/2, SCR_HEIGHT/2), 5.0f, IM_COL32(255, 0, 0, 200));
+            draw_list->AddCircle(ImVec2(SCR_WIDTH/2, SCR_HEIGHT/2), 20.0f, IM_COL32(255, 0, 0, 100), 0, 1.0f);
+            draw_list->AddLine(ImVec2(SCR_WIDTH/2 - 10, SCR_HEIGHT/2), ImVec2(SCR_WIDTH/2 + 10, SCR_HEIGHT/2), IM_COL32(255, 0, 0, 150));
+            draw_list->AddLine(ImVec2(SCR_WIDTH/2, SCR_HEIGHT/2 - 10), ImVec2(SCR_WIDTH/2, SCR_HEIGHT/2 + 10), IM_COL32(255, 0, 0, 150));
+        }
+
         ImGui::End();
 
         // 2. ImGui
