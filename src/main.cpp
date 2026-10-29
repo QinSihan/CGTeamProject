@@ -336,7 +336,7 @@ int main()
                     ImGui::SetCursorPosX(centerX);
                     ImGui::TextColored(ImVec4(1, 0, 0, 1), "[ SCANNING ]");
                     ImGui::SetCursorPosX(centerX + 20); ImGui::Text("1. Locate RED DOT on buildings");
-                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("2. ZOOM IN until FOV > 20");
+                    ImGui::SetCursorPosX(centerX + 20); ImGui::Text("2. ZOOM IN until FOV <= 20");
                     ImGui::SetCursorPosX(centerX + 20); ImGui::Text("3. LEFT CLICK to Scan");
                     
                      // Start Prompt
